@@ -10,7 +10,7 @@ library(mlr)
 rm(list=ls())
 
 ##Import training data set into pets
-pets <- read.csv("S:\\Cloud Storage\\GitHub\\CKME136\\train.csv")
+pets <- read.csv("S:\\Cloud Storage\\OneDrive\\Documents\\Repositories\\GitHub\\ShelterAnimal\\train.csv")
 
 ##Summary of pets data set
 summary(pets)
@@ -98,18 +98,19 @@ Color_lvl <- unique(unlist(Color_lst))
 ##Add new data frame columns of unique Color values
 pets <- data.frame(pets, do.call(rbind, lapply(Color_lst, function(x) table(factor(x, levels=Color_lvl)))), stringsAsFactors = FALSE)
 
-##Visualization
-# pets_corr <- pets[,c(4,6,11,12,13,17,22)]
-# pets_corr$OutcomeType <- as.integer(pets_corr$OutcomeType)
-# pets_corr$AnimalType <- as.integer(pets_corr$AnimalType)
-# pets_corr$SexuponOutcome_Sex <- as.integer(as.factor(pets_corr$SexuponOutcome_Sex))
-# pets_corr$SexuponOutcome_Neutered <- as.integer(as.factor(pets_corr$SexuponOutcome_Neutered))
-# str(pets_corr)
-# pets_corr_comp <- cor(pets_corr, method = "spearman")
-# corrplot(pets_corr_comp, type="upper", method="ellipse", tl.col="black", tl.srt=45)
-
 ##Fill AgeuponOutcome_Years NA values with mean value
 pets[is.na(pets$AgeuponOutcome_Years),'AgeuponOutcome_Years'] <- mean(pets$AgeuponOutcome_Years, na.rm = TRUE)
+
+##Visualization
+pets_corr <- pets[,c(4,6,11,12,13,17,22)]
+pets_corr$OutcomeType <- as.integer(pets_corr$OutcomeType)
+pets_corr$AnimalType <- as.integer(pets_corr$AnimalType)
+pets_corr$SexuponOutcome_Sex <- as.integer(as.factor(pets_corr$SexuponOutcome_Sex))
+pets_corr$SexuponOutcome_Neutered <- as.integer(as.factor(pets_corr$SexuponOutcome_Neutered))
+str(pets_corr)
+pets_corr_cor <- cor(pets_corr, method = "spearman")
+pets_corr_cor
+corrplot(pets_corr_cor, type="upper", method="ellipse", tl.col="black", tl.srt=45)
 
 ##Remove non-numeric attributes
 pets$AnimalID = NULL
@@ -124,14 +125,14 @@ pets$AgeuponOutcome = NULL
 pets$Breed = NULL
 pets$Color = NULL
 
-##Summary
+##Summary statistics
 
 
-##Copy pets data frame for finalization for training
+##Split pets data into train and test
+set.seed(555)
 pets_train_rn <- sample(nrow(pets), floor(nrow(pets)*0.7))
 pets_train <- pets[pets_train_rn,]
 pets_test <- pets[-pets_train_rn,]
-
 
 ##mlr Configuration
 configureMlr(on.par.without.desc = "quiet")
