@@ -2,15 +2,27 @@
 #install.packages("stringr")
 library(stringr)
 
+#Library corrplot
+#install.packages("corrplot")
+library(corrplot)
+
 ##Library mlr
 #install.packages("mlr")
 library(mlr)
+
+#Library e1071
+#install.packages("e1071")
+library(e1071)
+
+#Library RWeka
+#install.packages("RWeka")
+library(RWeka)
 
 ##Remove user defined objects from environment
 rm(list=ls())
 
 ##Import training data set into pets
-pets <- read.csv("S:\\Cloud Storage\\OneDrive\\Documents\\Repositories\\GitHub\\ShelterAnimal\\train.csv")
+pets <- read.csv("https://raw.githubusercontent.com/allanreym/ShelterAnimal/master/train.csv")
 
 ##Summary of pets data set
 summary(pets)
