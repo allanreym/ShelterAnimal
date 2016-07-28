@@ -39,7 +39,7 @@ pets_test_csv <- pets_test_csv[,c(1, 2, 3, 9, 10, 4, 5, 6, 7, 8)]
 names(pets_test_csv) <- names(pets)
 
 ##Function to transform datasets
-##Two datasets need to be passed as arguments so that both datasets have same columns
+##Two datasets need to be passed as arguments so that datasets (train/test/submission) have same columns/structure
 trans_pets <- function(pets, pets2) {
   pets_rn <- nrow(pets)
   pets_all <- rbind(pets, pets2)
