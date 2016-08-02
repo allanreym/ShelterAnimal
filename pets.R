@@ -18,12 +18,17 @@ library(RWeka)
 #install.packages("caret")
 library(caret)
 
+##Initialization - Library FSelector
+#install.packages("FSelector")
+library(FSelector)
+
 ##Initialization - Library MLmetrics
 #install.packages("MLmetrics")
 library(MLmetrics)
 
-##Initialization - Remove all objects
+##Initialization - Remove all objects and plots
 rm(list=ls())
+graphics.off()
 
 ##Load - Load combined train and test dataset, where test data starts at row 26730
 pets <- read.csv("https://raw.githubusercontent.com/allanreym/ShelterAnimal/master/data_combined.tsv", header = T, sep = "\t")
@@ -62,34 +67,21 @@ for (color in Color_lvl){pets[make.names(paste(color, "Color"))] <- as.numeric(g
 ##Transform - Remove Color column
 pets$Color <- NULL
 
-##Transform - From Breed values, remove "mix" pattern and split combination of breeds that use "/"
-Breed_lst <- strsplit(as.character(sub(" mix", "", tolower(pets$Breed))), "/")
-##Transform - Vector of unique Breed values
-Breed_lvl <- sort(unique(unlist(Breed_lst)))
-##Transform - Add new data frame columns of unique Color values
-for (breed in Breed_lvl){pets[make.names(breed)] <- as.numeric(grepl(breed, pets$Breed))}
-##Transform - Remove Breed column
+# ##Transform - From Breed values, remove "mix" pattern and split combination of breeds that use "/"
+# Breed_lst <- strsplit(as.character(sub(" mix", "", tolower(pets$Breed))), "/")
+# ##Transform - Vector of unique Breed values
+# Breed_lvl <- sort(unique(unlist(Breed_lst)))
+# ##Transform - Add new data frame columns of unique Color values
+# for (breed in Breed_lvl){pets[make.names(breed)] <- as.numeric(grepl(breed, pets$Breed))}
+# ##Transform - Remove Breed column
 pets$Breed <- NULL
 
 ##Transform - Remove columns no longer necessary
 pets_kaggle_test_ID <- strtoi(pets[test_start_row:nrow(pets),1])
-pets$AnimalID <- NULL
-pets$Name <- NULL
-pets$DateTime <- NULL
-pets$OutcomeSubtype <- NULL
-pets$SexuponOutcome <- NULL
-pets$AgeuponOutcome <- NULL
-pets$Breed1 <- NULL
-pets$Breed2 <- NULL
-pets$BreedAKC1 <- NULL
-pets$BreedAKC2 <- NULL
-pets$BreedPetfinder1 <- NULL
-pets$BreedPetfinder2 <- NULL
-pets$Size1 <- NULL
-pets$Size2 <- NULL
-pets$Energy1 <- NULL
-pets$Energy2 <- NULL
-pets$Friendliness.to.Other.Pets <- NULL
+pets_colrm <- c("AnimalID", "Name", "DateTime", "OutcomeSubtype", "SexuponOutcome", "AgeuponOutcome", "Breed1", "Breed2",
+  "BreedAKC1", "BreedAKC2", "BreedPetfinder1", "BreedPetfinder2", "Size1", "Size2", "Energy1", "Energy2",
+  "Friendliness.to.Other.Pets")
+for (column in pets_colrm){pets[column] <- NULL}
 
 ##Train/Test - Split pets data (from train.csv) into train and test
 ##test.csv cannot be used because outcome classes are not included
@@ -111,39 +103,39 @@ classif.task
 #listLearners()
 
 ##Train/Test - Using classif.J48 -- J48 Decision Trees learner
-lrn <- makeLearner("classif.J48", predict.type = "prob")
+lrn <- makeLearner("classif.J48", predict.type = "prob")  #WOW("J48")
 mod <- mlr::train(lrn, classif.task)
 pred <- predict(mod, newdata = pets_test)
 pets_pred <- pred$data
 perf_classif.J48 <- length(which(pets_pred$truth == pets_pred$response))/nrow(pets_pred)
+mod$learner.model
 
 ##Train/Test - Display performance
 confusionMatrix(pets_pred$response, pets_pred$truth)
 listMeasures(classif.task) #performance measure suitable for task
-performance(pred, measures = list(acc, ber, mmce)) #use performance measure
+performance(pred, measures = list(acc, ber, mmce, multiclass.auc)) #use performance measure
+MultiLogLoss(y_true = as.factor(pets_pred[,7]), y_pred = as.matrix(pets_pred[,2:6]))
 
 ##Train/Test - Display information gain
-#install.packages("FSelector")
-library(FSelector)
 infgain <- information.gain(OutcomeType ~ ., data = pets_train)
 head(infgain[base::order(infgain$attr_importance, decreasing = T), , drop = F], 20)
 
-##Visualization - Create dataset for visualization
+##Visualization 1 - Create dataset for visualization
 pets_numeric <- pets_kaggle_train
 
-##Visualization - Create OutcomeType indicators
+##Visualization 1 - Create OutcomeType indicators
 OutcomeType_lvl <- make.names(sort(unique(as.character(pets_numeric$OutcomeType))))
 for (outcome in OutcomeType_lvl){pets_numeric[make.names(outcome)] <- as.numeric(grepl(outcome, pets_numeric$OutcomeType))}
 
-##Visualization - Create SexuponOutcome_Neutered indicators
+##Visualization 1 - Create SexuponOutcome_Neutered indicators
 Neutered_lvl <- make.names(sort(unique(as.character(pets_numeric$SexuponOutcome_Neutered))))
 for (neutered in Neutered_lvl){pets_numeric[make.names(neutered)] <- as.numeric(grepl(neutered, pets_numeric$SexuponOutcome_Neutered))}
 
-##Visualization - Create SexuponOutcome_Neutered indicators
+##Visualization 1 - Create SexuponOutcome_Neutered indicators
 Sex_lvl <- make.names(sort(unique(as.character(pets_numeric$SexuponOutcome_Sex))))
 for (sex in Sex_lvl){pets_numeric[make.names(sex)] <- as.numeric(grepl(paste("\\b", sex, sep = ""), pets_numeric$SexuponOutcome_Sex))}
 
-##Visualization - Reduce pets_numeric features to those with most information gain
+##Visualization 1 - Reduce pets_numeric features to those with most information gain
 pets_numeric <- pets_numeric[,c(OutcomeType_lvl, Neutered_lvl, Sex_lvl,
                 rownames(head(infgain[base::order(infgain$attr_importance, decreasing = T), , drop = F], 15)))]
 pets_numeric$AnimalType <- NULL
@@ -151,9 +143,41 @@ pets_numeric$SexuponOutcome_Neutered <- NULL
 pets_numeric$SexuponOutcome_Sex <- NULL
 pets$OutcomeType <- NULL
 
-##Visualization - Correlation
+##Visualization 1 - Correlation
 pets_cor <- cor(pets_numeric, use = "pairwise.complete.obs", method = "spearman")
 corrplot(pets_cor, type="upper", method="ellipse", tl.col="black", tl.srt=45)
+
+##Visualization 2 - neutered vs adoption/return_to_owner
+pets_neut <- pets_kaggle_train[which((pets_kaggle_train$OutcomeType == "Adoption" | pets_kaggle_train$OutcomeType == "Return_to_owner") &
+                                       pets_kaggle_train$SexuponOutcome_Neutered != "unknown neutered"), c("OutcomeType", "SexuponOutcome_Neutered")]
+pets_neut$OutcomeType <- droplevels(pets_neut$OutcomeType)
+pets_neut$SexuponOutcome_Neutered <- droplevels(pets_neut$SexuponOutcome_Neutered)
+#counts <- table(pets_neut$SexuponOutcome_Neutered, pets_neut$OutcomeType)
+dat <- ddply(pets_neut, .(OutcomeType), function(.) {
+  good <- prop.table(table(factor(.$SexuponOutcome_Neutered)))
+  res <- cumsum(prop.table(table(factor(.$SexuponOutcome_Neutered))))
+  data.frame(lab = names(res), y = c(res), good = good, pos = cumsum(good) - 0.5 * good)
+})
+ggplot(pets_neut, aes(x = OutcomeType)) + geom_bar(aes(fill = SexuponOutcome_Neutered), position = 'fill') +
+  geom_text(aes(label = round(good.Freq, 2), x = OutcomeType, y = pos.Freq), data = dat) +
+  theme(legend.position = "right") +
+  ggtitle("Animal Outcome vs. Sterilization") + xlab("Outcome") + ylab("Frequency") +
+  guides(fill = guide_legend(title = NULL))
+
+##Visualization 3 - Histogram of Age by Outcome
+pets_age <- pets_kaggle_train[which(pets_kaggle_train$AgeuponOutcome_Years > 0), c("OutcomeType", "AgeuponOutcome_Years")]
+histogram(~ pets_age$AgeuponOutcome_Years | pets_age$OutcomeType,
+          main = "Distrubtion of Age Upon Outcome",
+          xlab = "Age Upon Outcome",
+          breaks = seq(0, 20, 2))
+
+##Visualization 4 - Decision Tree (highly pruned for visual purpose)
+classif.task <- makeClassifTask(data = pets_train, target = "OutcomeType")
+#lrn <- makeLearner("classif.J48", predict.type = "prob")  #WOW("J48")
+lrn <- makeLearner("classif.J48", predict.type = "prob", R = TRUE, N = 10, M = 350)  #WOW("J48")
+mod <- mlr::train(lrn, classif.task)
+plot(as.party(mod$learner.model),
+     main = "Decision Tree using J48 (C4.5) \n[highly pruned tree -- not same tree model used earlier in code]")
 
 #####
 ##Submission - Create task for mlr
