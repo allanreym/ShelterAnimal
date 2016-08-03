@@ -26,6 +26,14 @@ library(FSelector)
 #install.packages("MLmetrics")
 library(MLmetrics)
 
+##Initialization - Library plyr
+#install.packages("plyr")
+library(plyr)
+
+##Initialization - Library partykit
+#install.packages("partykit")
+library(partykit)
+
 ##Initialization - Remove all objects and plots
 rm(list=ls())
 graphics.off()
@@ -67,20 +75,13 @@ for (color in Color_lvl){pets[make.names(paste(color, "Color"))] <- as.numeric(g
 ##Transform - Remove Color column
 pets$Color <- NULL
 
-# ##Transform - From Breed values, remove "mix" pattern and split combination of breeds that use "/"
-# Breed_lst <- strsplit(as.character(sub(" mix", "", tolower(pets$Breed))), "/")
-# ##Transform - Vector of unique Breed values
-# Breed_lvl <- sort(unique(unlist(Breed_lst)))
-# ##Transform - Add new data frame columns of unique Color values
-# for (breed in Breed_lvl){pets[make.names(breed)] <- as.numeric(grepl(breed, pets$Breed))}
-# ##Transform - Remove Breed column
-pets$Breed <- NULL
+
 
 ##Transform - Remove columns no longer necessary
 pets_kaggle_test_ID <- strtoi(pets[test_start_row:nrow(pets),1])
 pets_colrm <- c("AnimalID", "Name", "DateTime", "OutcomeSubtype", "SexuponOutcome", "AgeuponOutcome", "Breed1", "Breed2",
   "BreedAKC1", "BreedAKC2", "BreedPetfinder1", "BreedPetfinder2", "Size1", "Size2", "Energy1", "Energy2",
-  "Friendliness.to.Other.Pets")
+  "Friendliness.to.Other.Pets", "Breed")
 for (column in pets_colrm){pets[column] <- NULL}
 
 ##Train/Test - Split pets data (from train.csv) into train and test
